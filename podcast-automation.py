@@ -6,3 +6,5 @@ list_of_files = glob(f"{dirpath}/*.mkv")
 
 currentFile = max(list_of_files, key=os.path.getctime)
 print(currentFile)
+
+# ffmpeg -output "/some-dir" -input "/some-dir/*.mkv"
