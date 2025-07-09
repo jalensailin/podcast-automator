@@ -22,3 +22,15 @@ payload = {"session_id": session_id, "path":  "Music"}
 response = requests.post(get_folder_id_url, data=payload)
 folder_id = response.json()["FolderId"]
 print(f"Folder ID is {folder_id}")
+
+# logout 
+logout_url = f"{api_url}/session/logout.json"
+payload = {"session_id": session_id}
+response = requests.post(logout_url, data=payload)
+response_dict = response.json() 
+if "result" in response_dict: #if successfully logged out, response is single-dictionary entry with key "result"
+    print(f"Logout {response.json()["result"]}")
+    print("Successfully logged out.")
+elif "error" in response_dict: # {'error': {'code': 401, 'message': 'Session does not exist, please re-login.'}}
+    error_dict = response.json()["error"]
+    print(f"Error {error_dict["code"]}. {error_dict["message"]}")
