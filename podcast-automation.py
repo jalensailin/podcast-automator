@@ -8,6 +8,7 @@ with open("./secrets.json") as file:
     secrets = json.load(file)
     input_path = secrets["input_path"]
     output_path = secrets["output_path"]
+    remote = secrets["remote"]
 
 # Get most recent file in input directory.
 list_of_files = glob(f"{input_path}/*.mkv")
@@ -30,4 +31,24 @@ sp = subprocess.run(
     capture_output=True,
 )
 
-# print(sp.stdout) # TODO: This line doesn't quite work yet
+podcast = "anaghast"
+
+# Copy file to remote server
+ssh_key = os.path.expanduser("~/.ssh/rsync_podcast")
+sp = subprocess.run(
+    [
+        "rsync",
+        "-av",
+        "--progress",
+        "-e",
+        f"ssh -i {ssh_key}",
+        f"{output_path}/test.mp3",
+        f"{remote}:./{podcast}",
+    ],
+    capture_output=True,
+    text=True,  # More human-readable
+)
+
+print("STDOUT:", sp.stdout)
+print("STDERR:", sp.stderr)
+print("Return code:", sp.returncode)
