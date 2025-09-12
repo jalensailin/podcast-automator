@@ -20,23 +20,58 @@ def get_video_file():
     return max(list_of_files, key=os.path.getctime)
 
 
+video_file = get_video_file()
+video_base_name = os.path.basename(video_file)
+
+
+# Get podcast name from video file.
+def get_podcast_name():
+    podcast_name = video_base_name.split("-")[0]
+    if podcast_name != "otari" and podcast_name != "anaghast":
+        raise Exception(f"Podcast '{podcast_name}' not found.")
+
+    return video_base_name.split("-")[0]
+
+
+podcast = get_podcast_name()
+
+
+# Get session number from video file.
+def get_session_number():
+    mp3_dir = secrets["output_path"]
+    list_of_files = glob(f"{mp3_dir}/{podcast}/*.mp3")
+    most_recent_file = max(list_of_files, key=os.path.getctime)
+
+    # E.g. "Session 11.mp3" --> "Session 11" --> "11".
+    most_recent_session_number = (
+        os.path.basename(most_recent_file).split(".")[0].split(" ")[1]
+    )
+
+    # Increment session number.
+    return int(most_recent_session_number) + 1
+
+
+session_number = get_session_number()
+
+print(f"Session number: {session_number}; Podcast: {podcast}; Video: {video_base_name}")
+
+
 # Call ffmpeg on input file.
 def convert_to_mp3():
-    input_file = get_video_file()
-    output_path = secrets["output_path"]
-    print(f"Converting file '{os.path.basename(input_file)}' to .mp3")
+    mp3_dir = secrets["output_path"]
+    print(f"Converting file '{video_base_name}' to 'Session {session_number}.mp3'")
     sp = subprocess.run(
         [
             "ffmpeg",
             "-y",  # Overwrite if file already exists.
             "-i",
-            input_file,
+            video_file,
             "-vn",
             "-c:a",
             "libmp3lame",
             "-b:a",
             "64k",
-            f"{output_path}/test.mp3",
+            f"{mp3_dir}/{podcast}/Session {session_number}.mp3",
         ],
         capture_output=True,
         text=True,
@@ -51,8 +86,8 @@ convert_to_mp3()
 
 
 def send_to_server():
-    podcast = "anaghast"
-    mp3_file = f"{secrets['output_path']}/test.mp3"
+    mp3_dir = secrets["output_path"]
+    mp3_file = f"{mp3_dir}/{podcast}/Session {session_number}.mp3"
     remote = secrets["remote"]
 
     # Copy file to remote server
@@ -65,6 +100,7 @@ def send_to_server():
             "-e",
             f"ssh -i {ssh_key}",
             f"{mp3_file}",
+            # We do not specify a path (and thus use `./`), because the ssh key restricts us via `rrsync` to the correct directory.
             f"{remote}:./{podcast}",
         ],
         capture_output=True,
