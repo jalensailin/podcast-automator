@@ -2,6 +2,13 @@ from glob import glob
 import json
 import os
 import subprocess
+import time
+
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3NoHeaderError
+
+# See https://stackoverflow.com/questions/42231932/writing-id3-tags-using-easyid3
+EasyID3.RegisterTextKey("comment", "COMM")
 
 
 # Get paths from secrets file.
@@ -52,6 +59,7 @@ def get_session_number():
 
 
 session_number = get_session_number()
+session_title = f"Session {session_number}"
 
 print(f"Session number: {session_number}; Podcast: {podcast}; Video: {video_base_name}")
 
@@ -59,7 +67,8 @@ print(f"Session number: {session_number}; Podcast: {podcast}; Video: {video_base
 # Call ffmpeg on input file.
 def convert_to_mp3():
     mp3_dir = secrets["output_path"]
-    print(f"Converting file '{video_base_name}' to 'Session {session_number}.mp3'")
+    mp3_file = f"{mp3_dir}/{podcast}/{session_title}.mp3"
+    print(f"Converting file '{video_base_name}' to '{os.path.basename(mp3_file)}'")
     sp = subprocess.run(
         [
             "ffmpeg",
@@ -71,7 +80,7 @@ def convert_to_mp3():
             "libmp3lame",
             "-b:a",
             "64k",
-            f"{mp3_dir}/{podcast}/Session {session_number}.mp3",
+            mp3_file,
         ],
         capture_output=True,
         text=True,
@@ -81,13 +90,31 @@ def convert_to_mp3():
     print("STDERR:", sp.stderr)
     print("Return code:", sp.returncode)
 
+    return mp3_file
 
-convert_to_mp3()
+
+mp3_file = convert_to_mp3()
+
+
+def tag_file(mp3_path):
+    print(f"✅ Tagging: {os.path.basename(mp3_path)}")
+    try:
+        audio = EasyID3(mp3_path)
+    except ID3NoHeaderError:
+        audio = EasyID3()
+    audio["title"] = f"{session_title}"
+
+    computer_time = os.path.getctime(mp3_path)
+    pretty_time = time.strftime("%Y.%m.%d", time.localtime(computer_time))
+    audio["comment"] = f"Recorded {pretty_time}"
+
+    audio.save(mp3_path)
+
+
+tag_file(mp3_file)
 
 
 def send_to_server():
-    mp3_dir = secrets["output_path"]
-    mp3_file = f"{mp3_dir}/{podcast}/Session {session_number}.mp3"
     remote = secrets["remote"]
 
     # Copy file to remote server
