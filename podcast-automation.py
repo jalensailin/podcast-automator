@@ -20,14 +20,48 @@ def get_secrets():
 secrets = get_secrets()
 
 
+PROCESSED_FILE = "processed.log"  # Convention to use capitalized variable names for values unexpected to change (constants).
+
+
+def load_processed(podcast_name):
+    processed_file = f"{secrets['output_path']}/{podcast_name}/{PROCESSED_FILE}"
+    if os.path.exists(processed_file):
+        with open(processed_file) as f:
+            return set(line.strip() for line in f)
+    return set()
+
+
+def save_processed(podcast_name, video_name):
+    processed_file = f"{secrets['output_path']}/{podcast_name}/{PROCESSED_FILE}"
+    # "a" for append (write file at the end).
+    with open(processed_file, "a") as f:
+        f.write(video_name + "\n")
+
+
 # Get most recent file in input directory.
 def get_video_file():
     input_path = secrets["input_path"]
+
     list_of_files = glob(f"{input_path}/*.mkv")
-    return max(list_of_files, key=os.path.getctime)
+    video_file = max(list_of_files, key=os.path.getctime)
+    video_base_name = os.path.basename(video_file)
+
+    podcast_name = video_base_name.split("-")[0]
+    processed_videos = load_processed(podcast_name)
+    print(processed_videos)
+
+    if video_base_name in processed_videos:
+        print(f"Video '{video_base_name}' has already been processed.")
+        return None
+    else:
+        return video_file
 
 
 video_file = get_video_file()
+if not video_file:
+    print("Exiting.")
+    exit()
+
 video_base_name = os.path.basename(video_file)
 
 
@@ -89,6 +123,8 @@ def convert_to_mp3():
     print("STDOUT:", sp.stdout)
     print("STDERR:", sp.stderr)
     print("Return code:", sp.returncode)
+
+    save_processed(podcast, video_base_name)
 
     return mp3_file
 
