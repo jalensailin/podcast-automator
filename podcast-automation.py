@@ -13,7 +13,9 @@ EasyID3.RegisterTextKey("comment", "COMM")
 
 # Get paths from secrets file.
 def get_secrets():
-    with open("./secrets.json") as file:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    secrets_path = os.path.join(script_dir, "secrets.json")
+    with open(secrets_path) as file:
         return json.load(file)
 
 
