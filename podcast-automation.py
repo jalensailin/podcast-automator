@@ -70,7 +70,8 @@ video_base_name = os.path.basename(video_file)
 # Get podcast name from video file.
 def get_podcast_name():
     podcast_name = video_base_name.split("-")[0]
-    if podcast_name != "otari" and podcast_name != "anaghast":
+    allowed_podcasts = ["otari", "anaghast", "deltagreen"]
+    if podcast_name not in allowed_podcasts:
         raise Exception(f"Podcast '{podcast_name}' not found.")
 
     return video_base_name.split("-")[0]
